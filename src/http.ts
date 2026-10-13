@@ -10,7 +10,7 @@ export async function fetchRaw(url: string, opts: { params?: Record<string, any>
   for (let attempt = 0; attempt <= retries; attempt++) {
     let r: Response;
     try {
-      r = await fetch(u, { ...opts.init, headers: { 'User-Agent': UA, ...(opts.headers ?? {}) }, signal: AbortSignal.timeout(opts.timeoutMs ?? 20000) });
+      r = await fetch(u, { ...opts.init, headers: { ...(typeof window === 'undefined' ? { 'User-Agent': UA } : {}), ...(opts.headers ?? {}) }, signal: AbortSignal.timeout(opts.timeoutMs ?? 20000) });
     } catch (e: any) {
       if (attempt === retries) throw new SourceError(`network error: ${e.message}`);
       await sleep(1500 * (attempt + 1));

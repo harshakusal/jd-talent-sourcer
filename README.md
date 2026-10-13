@@ -2,6 +2,13 @@
 
 Paste a job description → extract role / skills / seniority / location → source candidates from **free, public** sources → rank with a transparent 0–100 fit score → export CSV / JSON.
 
+## Browser-only version (GitHub Pages)
+**Live: https://harshakusal.github.io/jd-talent-sourcer/** – a static build in `/docs` that runs fully in the browser (no server).
+It reuses the same TypeScript as the backend (taxonomy, JD parsing, source providers, scoring, dedupe, CSV export), bundled by esbuild into `docs/app.js` (`npm run build:web`; `@nestjs/common` is swapped for a tiny shim in `web/nest-shim.ts`).
+- Works in the browser: **GitHub, Stack Exchange, HN (Algolia), GitLab, Dev.to** (all send CORS headers).
+- Skipped in the browser (no CORS headers; marked in the UI): **DuckDuckGo X-ray, Reddit** – use the NestJS server for those.
+- Optional GitHub token is stored only in your browser's `localStorage` and sent only to `api.github.com`. The OpenAI LLM option is server-only.
+
 ## Setup
 ```bash
 npm install

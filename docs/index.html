@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JD Talent Sourcer — find candidates from a job description</title>
+<meta name="description" content="Paste a job description and source ranked candidates from GitHub, Stack Overflow, Hacker News, GitLab and Dev.to — entirely in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%229%22 fill=%22%23FF6B5B%22/%3E%3C/svg%3E"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<style>
+:root{--coral:#FF6B5B;--coral-700:#C2412F;--coral-50:#FFF1EE;--amber:#FFB547;--ink:#1B1A1F;--muted:#6B6875;--line:#ECE7E4;--bg:#FFFBF8;--ok:#1F9D6B;--err:#C2412F;
+--f-head:'Plus Jakarta Sans',system-ui,sans-serif;--f-body:'Inter',system-ui,sans-serif;--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box}body{margin:0;font-family:var(--f-body);color:var(--ink);background:var(--bg);line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+header{padding:28px 0 8px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{font-family:var(--f-head);font-weight:800;font-size:1.15rem;display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none}
+.logo i{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--coral),var(--amber));display:inline-block}
+header a.gh{color:var(--muted);text-decoration:none;font-size:.92rem}
+.hero{padding:28px 0 12px}
+h1{font-family:var(--f-head);font-weight:800;font-size:clamp(2rem,4.4vw,3.1rem);line-height:1.08;margin:0 0 10px;letter-spacing:-.02em}
+h1 em{font-family:'Instrument Serif',serif;font-weight:400;color:var(--coral)}
+.lead{color:var(--muted);max-width:720px;margin:0}
+.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 1px 0 rgba(0,0,0,.02),0 12px 32px -18px rgba(194,65,47,.25)}
+.panel{margin-top:22px;display:grid;gap:16px}
+textarea{width:100%;min-height:220px;border:1px solid var(--line);border-radius:14px;padding:14px 16px;font:inherit;resize:vertical;background:var(--bg)}
+textarea:focus,input:focus{outline:2px solid var(--coral);outline-offset:1px;border-color:transparent}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.src{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:.9rem;cursor:pointer;background:#fff}
+.src.disabled{opacity:.55;cursor:not-allowed}.src em{font-style:normal;font-size:.72rem;color:var(--coral-700);background:var(--coral-50);padding:1px 7px;border-radius:999px}
+input[type=text],input[type=password],input[type=number]{border:1px solid var(--line);border-radius:999px;padding:9px 14px;font:inherit;background:#fff}
+.btn{font-family:var(--f-head);font-weight:700;border-radius:999px;border:1px solid transparent;cursor:pointer;padding:12px 22px;font-size:.98rem;transition:transform .2s var(--ease),box-shadow .2s var(--ease),background .2s}
+.btn.primary{background:var(--coral);color:#fff;box-shadow:0 10px 24px -10px var(--coral)}.btn.primary:hover{transform:translateY(-1px);background:var(--coral-700)}
+.btn.primary:disabled{opacity:.6;transform:none;cursor:wait}
+.btn.ghost{background:#fff;border-color:var(--line);color:var(--ink);padding:8px 14px;font-size:.88rem;margin-left:6px}.btn.ghost:hover{border-color:var(--coral);color:var(--coral-700)}
+.k{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:4px}
+details summary{cursor:pointer;color:var(--muted);font-size:.92rem}
+small,.muted{color:var(--muted)}.err{color:var(--err)}
+.job{display:grid;grid-template-columns:2fr 1fr 2fr;gap:16px;margin-top:22px}.job .wide{grid-column:1/-1}
+.chip{display:inline-block;padding:2px 9px;margin:2px 4px 2px 0;border-radius:999px;background:#F6F2EF;font-size:.8rem}
+.chip.must{background:var(--coral-50);color:var(--coral-700);font-weight:600}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid var(--line);font-size:.75rem;color:var(--muted)}
+.badge{display:inline-block;padding:3px 10px;margin:2px 6px 2px 0;border-radius:999px;font-size:.8rem;font-weight:600}
+.badge.ok{background:#E8F7F0;color:var(--ok)}.badge.err{background:var(--coral-50);color:var(--err)}.badge.skip{background:#F3F1F0;color:var(--muted)}
+.bar{margin:18px 0 10px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th{font-family:var(--f-head);text-align:left;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:#FCF8F6;padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:0}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}tr:last-child td{border-bottom:0}tr:hover td{background:#FFFCFA}
+td a{color:var(--coral-700);text-decoration:none}td a:hover{text-decoration:underline}
+.score{display:inline-grid;place-items:center;width:46px;height:46px;border-radius:50%;font-family:var(--f-head);font-weight:800;font-size:.9rem;
+background:conic-gradient(var(--coral) calc(var(--s)*1%),#F3ECE8 0);position:relative}
+.score::before{content:'';position:absolute;inset:5px;border-radius:50%;background:#fff}.score{isolation:isolate}.score::before{z-index:-1}
+.bd div{display:flex;justify-content:space-between;gap:10px;font-size:.78rem;color:var(--muted)}.bd b{color:var(--ink);font-weight:600}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--coral-50);border-top-color:var(--coral);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px}
+@keyframes s{to{transform:rotate(360deg)}}
+footer{padding:40px 0;color:var(--muted);font-size:.85rem}
+@media (max-width:760px){.job{grid-template-columns:1fr}}
+</style></head>
+<body><div class="wrap">
+<header><a class="logo" href="./"><i></i>JD Talent Sourcer</a><a class="gh" href="https://github.com/harshakusal/jd-talent-sourcer">GitHub ↗</a></header>
+<section class="hero">
+  <h1>Paste a job description. <em>Get a ranked shortlist.</em></h1>
+  <p class="lead">Parses skills, seniority and location from the JD, then searches GitHub, Stack Overflow, Hacker News “Who wants to be hired”, GitLab and Dev.to straight from your browser. Every score comes with a breakdown.</p>
+</section>
+<section class="card panel">
+  <div><span class="k">Job description</span><textarea id="jd" placeholder="Paste the full job description here…"></textarea></div>
+  <div><span class="k">Sources</span><div class="row" id="sources"></div></div>
+  <details><summary>GitHub token (optional, raises the limit from 60 to 5,000 requests/hour)</summary>
+    <div class="row" style="margin-top:10px">
+      <input type="password" id="token" placeholder="ghp_… (no scopes needed)" size="38" autocomplete="off">
+      <button class="btn ghost" id="saveToken">Save</button><button class="btn ghost" id="clearToken">Clear</button>
+      <small id="tokenState"></small>
+    </div>
+    <small>Stored only in this browser's localStorage and sent only to api.github.com.</small>
+  </details>
+  <div class="row">
+    <button class="btn primary" id="go">Find candidates</button>
+    <button class="btn ghost" id="sample">Use sample JD</button>
+    <label class="muted">per source <input type="number" id="limit" value="15" min="1" max="50" style="width:76px"></label>
+    <span id="status" class="muted"></span>
+  </div>
+</section>
+<div id="summary"></div>
+<div id="results"></div>
+<footer>Uses only public APIs and returns public profile links. Use the results for legitimate recruiting, respect opt-outs and privacy laws, and treat scores as a starting point for human review.
+DuckDuckGo X-ray and Reddit need the <a href="https://github.com/harshakusal/jd-talent-sourcer#usage">NestJS server version</a> because they block browser (CORS) requests.</footer>
+</div>
+<script src="app.js"></script>
+</body></html>
