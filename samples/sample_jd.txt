@@ -1,0 +1,14 @@
+Senior Backend Engineer (Python)
+Location: Bangalore, India (Hybrid / Remote within India)
+
+We're hiring a Senior Backend Engineer to build our data platform APIs.
+
+Requirements:
+- 5+ years of professional experience with Python
+- Strong experience with Django or FastAPI, PostgreSQL and REST APIs
+- Docker, Kubernetes and AWS in production
+- Experience with distributed systems and microservices
+
+Nice to have:
+- Kafka, Redis, Terraform
+- Exposure to machine learning pipelines

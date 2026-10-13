@@ -1,0 +1,4 @@
+requests>=2.31
+flask>=3.0
+ddgs>=9.0   # DuckDuckGo X-ray search (formerly duckduckgo_search)
+pytest>=8.0
