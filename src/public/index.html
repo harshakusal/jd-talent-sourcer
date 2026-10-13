@@ -1,0 +1,40 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>JD Talent Sourcer</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:2em;max-width:1400px}textarea{width:100%;height:220px;font-family:inherit}
+table{border-collapse:collapse;font-size:13px;margin-top:1em}td,th{border:1px solid #ccc;padding:4px 6px;vertical-align:top}
+th{background:#f3f3f3}small,.muted{color:#666}.ok{color:#080}.err{color:#b00}button{padding:6px 14px}
+</style></head><body>
+<h2>JD Talent Sourcer</h2>
+<textarea id="jd" placeholder="Paste a job description"></textarea>
+<div id="srcs" style="margin:.5em 0"></div>
+per source <input id="limit" value="15" size="3"> <button id="go">Source candidates</button> <span id="busy" class="muted"></span>
+<div id="summary"></div><div id="out"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+fetch('/api/sources').then((r) => r.json()).then((list) => {
+  $('srcs').innerHTML = list.map((s) => `<label><input type="checkbox" value="${s.name}" ${s.enabledByDefault ? 'checked' : ''}> ${s.name}</label>`).join(' &nbsp; ');
+});
+$('go').onclick = async () => {
+  const sources = [...document.querySelectorAll('#srcs input:checked')].map((i) => i.value);
+  $('busy').textContent = 'Searching… (10–60s)'; $('go').disabled = true;
+  try {
+    const r = await fetch('/api/source', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jd: $('jd').value, sources, limit: +$('limit').value || 15 }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message || r.statusText);
+    const j = d.job;
+    $('summary').innerHTML = `<p><b>${esc(j.title)}</b> · ${esc(j.seniority)} · ${esc(j.location || '-')}${j.remote ? ' (remote ok)' : ''}<br>
+      Skills: ${esc(j.skills.join(', '))}<br>Must-have: ${esc(j.mustHave.join(', '))}<br>
+      <small>${Object.entries(d.sources).map(([k, v]) => `<span class="${v.startsWith('ok') ? 'ok' : 'err'}">${esc(k)}: ${esc(v)}</span>`).join(' &nbsp; ')}</small></p>
+      <p><a href="/api/export.csv">Download CSV</a> · <a href="/api/export.json">Download JSON</a> · ${d.count} candidates</p>`;
+    $('out').innerHTML = `<table><tr><th>#</th><th>Score</th><th>Name</th><th>Source</th><th>Location</th><th>Matched skills</th><th>Breakdown</th><th>Links</th></tr>` +
+      d.candidates.map((c, i) => `<tr><td>${i + 1}</td><td><b>${c.score}</b></td><td>${esc(c.name)}<br><small>${esc(c.handle)}</small></td>
+        <td>${esc(c.sources.join(', '))}</td><td>${esc(c.location)}</td><td>${esc(c.matchedSkills.join(', '))}</td>
+        <td><small>${Object.entries(c.breakdown).map(([k, v]) => `${k} ${v}`).join('<br>')}</small></td>
+        <td>${c.profileUrls.slice(0, 3).map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.slice(0, 50))}</a>`).join('<br>')}</td></tr>`).join('') + '</table>';
+  } catch (e) { $('summary').innerHTML = `<p class="err">${esc(e.message)}</p>`; $('out').innerHTML = ''; }
+  finally { $('busy').textContent = ''; $('go').disabled = false; }
+};
+</script></body></html>

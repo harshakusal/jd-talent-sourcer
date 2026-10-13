@@ -1,44 +1,53 @@
-# jd-talent-sourcer
+# jd-talent-sourcer (NestJS)
 
-Paste a job description → extract role/skills/seniority/location → source candidates from **free, public** sources → rank them with a transparent 0–100 fit score → export CSV/JSON.
+Paste a job description → extract role / skills / seniority / location → source candidates from **free, public** sources → rank with a transparent 0–100 fit score → export CSV / JSON.
 
 ## Setup
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+npm install
+npm run build
+npm start                 # http://localhost:3000  (PORT / HOST env vars)
+npm run start:dev         # watch mode
+npm test                  # jest (unit + API tests with mocked sources; no network)
 ```
 
 ## Usage
-CLI (file or stdin):
-```bash
-python -m jd_sourcer samples/sample_jd.txt --csv out.csv --json out.json
-cat jd.txt | python -m jd_sourcer -s github,stackexchange,hackernews -n 25 --top 30
-python -m jd_sourcer --help
-```
-Web UI (Flask, paste box + ranked table + CSV/JSON download):
-```bash
-python -m jd_sourcer.web   # http://127.0.0.1:5000
-```
-Tests: `pytest -q`
+**Web UI** – open `/`: paste a JD, choose sources, see the ranked table, download CSV/JSON.
 
-## JD extraction
-Keyword / skill-taxonomy based (`jd_sourcer/taxonomy.py`, ~70 skills with aliases): title, seniority (junior…principal, also inferred from "N+ years"), location, remote flag, skills, and must-have skills (skills before a "Nice to have / Preferred" section get 2× weight).
-If `OPENAI_API_KEY` is set, an LLM extraction is merged on top (`OPENAI_MODEL`, default `gpt-4o-mini`). Use `--no-llm` to disable. Works fully without it.
+**API**
+```bash
+curl -X POST localhost:3000/api/source -H 'Content-Type: application/json' \
+  -d "{\"jd\": $(jq -Rs . < samples/sample_jd.txt), \"sources\": [\"github\",\"stackexchange\"], \"limit\": 15}"
+```
+| endpoint | |
+|---|---|
+| `POST /api/source` | body `{ jd, sources?, limit? (1–50, per source), useLlm? }` → `{ job, sources (per-source status), count, candidates[] }`. Add `?format=csv` for CSV. |
+| `GET /api/export.csv`, `GET /api/export.json` | export of the last run |
+| `GET /api/sources` | available sources and defaults |
+| `GET /api/health` | health check |
 
-## Sources (pluggable: `jd_sourcer/sources/*.py`, subclass `Source`, register in `sources/__init__.py`)
+**CLI**: `node dist/cli.js samples/sample_jd.txt --sources github,stackexchange --limit 15 --top 20 --csv out.csv --json out.json`
+
+## JD parsing
+Skill taxonomy (`src/taxonomy.ts`, ~70 skills with aliases) plus heuristics for title, seniority (junior…principal, also from "N+ years"), location, remote, and must-have skills (skills before a "Nice to have / Preferred" section get 2× weight).
+If `OPENAI_API_KEY` is set, an LLM extraction (`OPENAI_MODEL`, default `gpt-4o-mini`) is merged on top. Everything works without it.
+
+## Sources
+Each source is an injectable NestJS provider in `src/sources/` implementing `CandidateSource` (`name`, `enabledByDefault`, `search()`), registered in `sources.module.ts`.
+
 | name | what | auth |
 |---|---|---|
 | `github` | User search API (language + location + followers/repos), enriched with profile, repo languages/topics, stars, last push | optional `GITHUB_TOKEN` (60 → 5000 req/h) |
-| `stackexchange` | Top all-time answerers for the JD's tags on Stack Overflow + profile (reputation, location, last access) | optional `STACKEXCHANGE_KEY` (300 → 10k req/day) |
+| `stackexchange` | Top all-time answerers for the JD's tags on Stack Overflow + profile (reputation, location, last access) | optional `STACKEXCHANGE_KEY` |
 | `hackernews` | Comments in the latest monthly "Ask HN: Who wants to be hired?" threads via Algolia HN API | none |
-| `gitlab` | Owners of recently active public projects matching skills | optional `GITLAB_TOKEN` |
+| `gitlab` | Owners of recently active public projects matching the skills | optional `GITLAB_TOKEN` |
 | `devto` | Dev.to authors on the JD's skill tags (Forem API), with linked GitHub handle | none |
-| `xray` | DuckDuckGo X-ray (`site:linkedin.com/in`, `site:github.com`) via `ddgs` – returns **public profile URLs + search snippet only** | none |
-| `reddit` | r/forhire `[For Hire]` posts (opt-in: `-s ...,reddit`) | none |
+| `xray` | DuckDuckGo X-ray via the HTML endpoint (`site:linkedin.com/in`, `site:github.com`): **public profile URLs + search snippet only** | none |
+| `reddit` | r/forhire `[For Hire]` posts – **off by default**, request with `sources: ["reddit"]` | none |
 
 Not included: Kaggle and Hashnode (no public user-search API), Wellfound (no API).
 
-Each source runs in parallel; rate limits (429/403 + `Retry-After`/`X-RateLimit-Reset`) are retried briefly, and any source failure is reported in the status line but never kills the run. Candidates are deduped across sources by canonical GitHub/GitLab/LinkedIn/Dev.to URL.
+Sources run in parallel. Rate limits (429 / exhausted GitHub quota, `Retry-After` / `X-RateLimit-Reset`) get a short backoff, and a failing source is reported in `sources` (`"error: …"`) without failing the request. Candidates are deduped across sources by canonical GitHub / GitLab / LinkedIn / Dev.to URL.
 
 ## Fit score (0–100)
 | component | max | basis |
@@ -49,12 +58,16 @@ Each source runs in parallel; rate limits (429/403 + `Retry-After`/`X-RateLimit-
 | activity | 10 | recency of last push / post / access |
 | source_signals | 10 | log-scaled stars, followers, reputation, reactions |
 
-Every candidate carries its `breakdown` in the UI, CSV and JSON.
+Each candidate includes its `breakdown` in the UI, JSON and CSV.
+
+## Deploy (free)
+- **Docker**: `docker build -t jd-talent-sourcer . && docker run -p 3000:3000 -e GITHUB_TOKEN=... jd-talent-sourcer`
+- **Render**: New → Blueprint → select this repo; `render.yaml` defines a free Docker web service (health check `/api/health`). Set the optional env vars in the dashboard.
 
 ## Env vars
-`GITHUB_TOKEN`, `STACKEXCHANGE_KEY`, `GITLAB_TOKEN`, `OPENAI_API_KEY`, `OPENAI_MODEL` – all optional.
+`PORT` (3000), `HOST` (0.0.0.0), `GITHUB_TOKEN`, `STACKEXCHANGE_KEY`, `GITLAB_TOKEN`, `OPENAI_API_KEY`, `OPENAI_MODEL` – all optional.
 
 ## Ethics / ToS
-- Uses only official public APIs and public search results; respects rate limits. Do **not** scrape LinkedIn or other sites that prohibit it — the X-ray source only stores URLs and snippets returned by the search engine.
-- Data is public but still personal data: use it only for legitimate recruiting outreach, keep it minimal, honour opt-outs and GDPR/DPDP obligations, and don't resell it.
-- Scores are heuristics on sparse public signals — a starting point for human review, not a hiring decision. Avoid using them in ways that encode bias (e.g. by location or profile visibility).
+- Uses only official public APIs and public search results, and respects rate limits. Do **not** scrape LinkedIn or other sites that forbid it; the X-ray source stores only URLs and snippets returned by the search engine.
+- Public data is still personal data: use it only for legitimate recruiting outreach, keep it minimal, honour opt-outs and GDPR / India DPDP obligations, and don't resell it.
+- Scores are heuristics on sparse public signals, meant as a starting point for human review, not a hiring decision. Watch for bias (e.g. by location or profile visibility).

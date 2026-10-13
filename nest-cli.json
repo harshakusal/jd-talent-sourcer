@@ -1,0 +1,1 @@
+{ "collection": "@nestjs/schematics", "sourceRoot": "src", "compilerOptions": { "assets": ["public/**/*"], "watchAssets": true } }
